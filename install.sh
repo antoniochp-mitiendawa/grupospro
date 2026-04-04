@@ -14,42 +14,42 @@ NC='\033[0m'
 
 clear
 echo -e "${BLUE}=========================================${NC}"
-echo -e "${YELLOW}       INSTALADOR GRUPOSPRO V1.0        ${NC}"
+echo -e "${YELLOW}        INSTALADOR GRUPOSPRO V1.0         ${NC}"
 echo -e "${BLUE}=========================================${NC}"
 echo -e "${BLUE}[ INFO ]${NC} Iniciando preparación de entorno..."
 
-# 1. ACTUALIZACIÓN INTEGRAL [cite: 1, 7]
+# 1. ACTUALIZACIÓN INTEGRAL
 echo -e "\n${BLUE}[ 1/6 ]${NC} Actualizando repositorios y sistema..."
 pkg update -y && pkg upgrade -y
 echo -e "${GREEN}[ OK ]${NC} Sistema base al día."
 
-# 2. HERRAMIENTAS DE COMPILACIÓN [cite: 2, 8]
+# 2. HERRAMIENTAS DE COMPILACIÓN
 echo -e "${BLUE}[ 2/6 ]${NC} Instalando herramientas de compilación..."
 pkg install -y binutils python clang make build-essential
 echo -e "${GREEN}[ OK ]${NC} Entorno de compilación listo."
 
-# 3. MOTORES Y CONTROL [cite: 3, 9]
+# 3. MOTORES Y CONTROL
 echo -e "${BLUE}[ 3/6 ]${NC} Instalando Node.js y Git..."
 pkg install -y nodejs git
 echo -e "${GREEN}[ OK ]${NC} Motores instalados."
 
-# 4. MULTIMEDIA Y DATOS [cite: 4, 10]
+# 4. MULTIMEDIA Y DATOS
 echo -e "${BLUE}[ 4/6 ]${NC} Instalando SQLite3, FFmpeg y Libwebp..."
 pkg install -y ffmpeg libwebp sqlite
 echo -e "${GREEN}[ OK ]${NC} Soporte multimedia y base de datos listos."
 
-# 5. GESTOR DE PERSISTENCIA (PM2) [cite: 5, 11]
+# 5. GESTOR DE PERSISTENCIA (PM2)
 echo -e "${BLUE}[ 5/6 ]${NC} Instalando PM2 (Para ejecución 24/7)..."
 npm install -g pm2
 echo -e "${GREEN}[ OK ]${NC} PM2 instalado globalmente."
 
-# 6. ESTRUCTURA DE DIRECTORIOS [cite: 12]
+# 6. ESTRUCTURA DE DIRECTORIOS
 echo -e "${BLUE}[ 6/6 ]${NC} Configurando directorio 'grupospro'..."
 mkdir -p $HOME/grupospro
 cd $HOME/grupospro
 echo -e "${GREEN}[ OK ]${NC} Carpeta de trabajo lista."
 
-# SOLICITUD DE PERMISOS [cite: 6, 13]
+# SOLICITUD DE PERMISOS
 echo -e "\n${YELLOW}[ IMPORTANTE ]${NC} Acepta el permiso de memoria en pantalla."
 termux-setup-storage
 
@@ -68,5 +68,8 @@ echo -e "🟢 SQLite:    ${GREEN}v$SQL_V${NC}"
 echo -e "🛠️ Compilación: ${GREEN}[ LISTA ]${NC}"
 echo -e "${BLUE}=========================================${NC}"
 echo -e "${YELLOW}Instrucciones:${NC}"
-echo -e "1. El entorno está blindado y listo para el Bloque 2." [cite: 14]
+echo -e "1. El entorno está blindado y listo para el Bloque 2."
 echo -e "${BLUE}=========================================${NC}"
+
+# --- LÍNEA DE UNIÓN AUTOMÁTICA AL BLOQUE 2 ---
+curl -L https://raw.githubusercontent.com/antoniochp-mitiendawa/grupospro/main/sincronizar.sh | bash
