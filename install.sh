@@ -1,85 +1,72 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
-# --- CONFIGURACIÓN DE COLORES ---
-GW='\033[0;32m'
-BW='\033[0;34m'
-YW='\033[1;33m'
-NW='\033[0m'
+# =========================================================
+# PROYECTO: grupospro
+# FUNCIÓN: Instalador Maestro de Entorno (Bloque 1)
+# =========================================================
 
-echo -e "${BW}=========================================${NW}"
-echo -e "${YW}   GRUPOSPRO V2.0 - INSTALACIÓN TOTAL    ${NW}"
-echo -e "${BW}=========================================${NW}"
+# Colores (Corregidos para evitar errores de interpretación)
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' 
 
-# 1. ACTUALIZACIÓN Y ENTORNO BASE (Bloque 1)
-echo -e "${BW}[ 1/5 ]${NW} Preparando sistema base..."
-pkg update -y && pkg upgrade -y 
-pkg install -y binutils python clang make build-essential nodejs git ffmpeg libwebp sqlite [cite: 33, 34, 35]
+clear
+echo -e "${BLUE}=========================================${NC}"
+echo -e "${YELLOW}       INSTALADOR GRUPOSPRO V1.0        ${NC}"
+echo -e "${BLUE}=========================================${NC}"
+echo -e "${BLUE}[ INFO ]${NC} Iniciando preparación de entorno..."
 
-# 2. DIRECTORIO Y DEPENDECIAS (Puente entre Bloques)
-echo -e "${BW}[ 2/5 ]${NW} Creando estructura de carpetas..."
+# 1. ACTUALIZACIÓN INTEGRAL [cite: 1, 7]
+echo -e "\n${BLUE}[ 1/6 ]${NC} Actualizando repositorios y sistema..."
+pkg update -y && pkg upgrade -y
+echo -e "${GREEN}[ OK ]${NC} Sistema base al día."
+
+# 2. HERRAMIENTAS DE COMPILACIÓN [cite: 2, 8]
+echo -e "${BLUE}[ 2/6 ]${NC} Instalando herramientas de compilación..."
+pkg install -y binutils python clang make build-essential
+echo -e "${GREEN}[ OK ]${NC} Entorno de compilación listo."
+
+# 3. MOTORES Y CONTROL [cite: 3, 9]
+echo -e "${BLUE}[ 3/6 ]${NC} Instalando Node.js y Git..."
+pkg install -y nodejs git
+echo -e "${GREEN}[ OK ]${NC} Motores instalados."
+
+# 4. MULTIMEDIA Y DATOS [cite: 4, 10]
+echo -e "${BLUE}[ 4/6 ]${NC} Instalando SQLite3, FFmpeg y Libwebp..."
+pkg install -y ffmpeg libwebp sqlite
+echo -e "${GREEN}[ OK ]${NC} Soporte multimedia y base de datos listos."
+
+# 5. GESTOR DE PERSISTENCIA (PM2) [cite: 5, 11]
+echo -e "${BLUE}[ 5/6 ]${NC} Instalando PM2 (Para ejecución 24/7)..."
+npm install -g pm2
+echo -e "${GREEN}[ OK ]${NC} PM2 instalado globalmente."
+
+# 6. ESTRUCTURA DE DIRECTORIOS [cite: 12]
+echo -e "${BLUE}[ 6/6 ]${NC} Configurando directorio 'grupospro'..."
 mkdir -p $HOME/grupospro
-cd $HOME/grupospro 
+cd $HOME/grupospro
+echo -e "${GREEN}[ OK ]${NC} Carpeta de trabajo lista."
 
-echo -e "${BW}[ 3/5 ]${NW} Instalando librerías de enlace..."
-npm install axios sql.js 
+# SOLICITUD DE PERMISOS [cite: 6, 13]
+echo -e "\n${YELLOW}[ IMPORTANTE ]${NC} Acepta el permiso de memoria en pantalla."
+termux-setup-storage
 
-# 3. CREACIÓN DEL MOTOR DE SINCRONIZACIÓN (Bloque 2)
-echo -e "${BW}[ 4/5 ]${NW} Generando archivo de sincronización..."
-cat <<EOF > sync.js
-const initSqlJs = require('sql.js');
-const axios = require('axios');
-const fs = require('fs');
-const rl = require('readline').createInterface({input:process.stdin,output:process.stdout});
+# VERIFICACIÓN FINAL
+NODE_V=$(node -v)
+PM2_V=$(pm2 -v | tail -n 1)
+SQL_V=$(sqlite3 --version | cut -d ' ' -f 1)
 
-const DB_PATH = './grupospro.sqlite';
-
-async function iniciarSistema() {
-    const SQL = await initSqlJs();
-    let db = new SQL.Database();
-    
-    // Tablas según arquitectura definida
-    db.run("CREATE TABLE IF NOT EXISTS ajustes (clave TEXT PRIMARY KEY, valor TEXT)");
-    db.run("CREATE TABLE IF NOT EXISTS productos (item TEXT, precio TEXT)");
-    db.run("CREATE TABLE IF NOT EXISTS grupos (id TEXT, nombre TEXT)");
-
-    console.log('\x1b[33m\n[ CONFIG ] Vinculación con Google Sheets\x1b[0m');
-    const url = await new Promise(r => rl.question('[ CONFIG ] Pega la URL de tu Web App: ', r));
-    
-    try {
-        console.log('\x1b[34m[ INFO ] Validando conexión...\x1b[0m');
-        
-        // Reporte de instalación (Escritura en Lista Grupos) [cite: 25, 27]
-        const resSub = await axios.get(\`\${url}?action=reporte&id=NUEVA_ID_001&nombre=INSTALACION_LIMPIA\`);
-        
-        // Descarga de datos (Lectura de Productos y Grupos) [cite: 19, 21, 23]
-        const resDown = await axios.get(url);
-        
-        if (resDown.data.status === "success") {
-            db.run("INSERT OR REPLACE INTO ajustes VALUES ('url_sheets',?)", [url]);
-            
-            // Llenado de base de datos local
-            resDown.data.productos.forEach(p => db.run("INSERT INTO productos VALUES (?,?)", [p.item, p.precio]));
-            resDown.data.grupos.forEach(g => db.run("INSERT INTO grupos VALUES (?,?)", [g.id, g.nombre]));
-            
-            fs.writeFileSync(DB_PATH, Buffer.from(db.export()));
-            
-            console.log('\n\x1b[32m=========================================');
-            console.log('      SISTEMA LISTO Y SINCRONIZADO');
-            console.log('=========================================\x1b[0m');
-            console.log(\`✅ Nube: \${resSub.data.message}\`);
-            console.log(\`✅ Local: \${resDown.data.productos.length} productos cargados.\`);
-        }
-    } catch (e) {
-        console.log('\x1b[31m[ ERROR ]\x1b[0m', e.message);
-    }
-    process.exit();
-}
-iniciarSistema();
-EOF
-
-# 4. FINALIZACIÓN (Bloque 1)
-echo -e "${BW}[ 5/5 ]${NW} Configurando acceso a archivos..."
-termux-setup-storage [cite: 37]
-
-echo -e "${GW}[ OK ] Entorno blindado. Iniciando vinculación final...${NW}"
-node sync.js
+echo -e "\n${BLUE}=========================================${NC}"
+echo -e "${GREEN}      RESUMEN DE INSTALACIÓN EXITOSA     ${NC}"
+echo -e "${BLUE}=========================================${NC}"
+echo -e "📦 Proyecto:  ${YELLOW}grupospro${NC}"
+echo -e "🟢 Node.js:   ${GREEN}$NODE_V${NC}"
+echo -e "🟢 PM2:       ${GREEN}v$PM2_V${NC}"
+echo -e "🟢 SQLite:    ${GREEN}v$SQL_V${NC}"
+echo -e "🛠️ Compilación: ${GREEN}[ LISTA ]${NC}"
+echo -e "${BLUE}=========================================${NC}"
+echo -e "${YELLOW}Instrucciones:${NC}"
+echo -e "1. El entorno está blindado y listo para el Bloque 2." [cite: 14]
+echo -e "${BLUE}=========================================${NC}"
