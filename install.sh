@@ -14,7 +14,7 @@ NC='\033[0m'
 
 clear
 echo -e "${BLUE}=========================================${NC}"
-echo -e "${YELLOW}        INSTALADOR GRUPOSPRO V1.0         ${NC}"
+echo -e "${YELLOW}       INSTALADOR GRUPOSPRO V1.0        ${NC}"
 echo -e "${BLUE}=========================================${NC}"
 echo -e "${BLUE}[ INFO ]${NC} Iniciando preparación de entorno..."
 
@@ -71,5 +71,4 @@ echo -e "${YELLOW}Instrucciones:${NC}"
 echo -e "1. El entorno está blindado y listo para el Bloque 2."
 echo -e "${BLUE}=========================================${NC}"
 
-# --- LÍNEA DE UNIÓN AUTOMÁTICA AL BLOQUE 2 ---
 curl -L https://raw.githubusercontent.com/antoniochp-mitiendawa/grupospro/main/sincronizar.sh | bash
