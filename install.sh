@@ -1,72 +1,75 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
-# =========================================================
-# PROYECTO: grupospro
-# FUNCIÓN: Instalador Maestro de Entorno (Bloque 1)
-# =========================================================
+# ==========================================
+# INSTALADOR MAESTRO: BLOQUE 1 + BLOQUE 2
+# PROYECTO: GruposPro V2.0
+# ==========================================
 
-# Colores (Corregidos para evitar errores de interpretación)
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m' 
+echo -e "\e[34m[1/4]\e[0m Actualizando sistema y paquetes base..."
+pkg update && pkg upgrade -y
+pkg install nodejs-lts python -y [cite: 18]
 
-clear
-echo -e "${BLUE}=========================================${NC}"
-echo -e "${YELLOW}       INSTALADOR GRUPOSPRO V1.0        ${NC}"
-echo -e "${BLUE}=========================================${NC}"
-echo -e "${BLUE}[ INFO ]${NC} Iniciando preparación de entorno..."
-
-# 1. ACTUALIZACIÓN INTEGRAL [cite: 1, 7]
-echo -e "\n${BLUE}[ 1/6 ]${NC} Actualizando repositorios y sistema..."
-pkg update -y && pkg upgrade -y
-echo -e "${GREEN}[ OK ]${NC} Sistema base al día."
-
-# 2. HERRAMIENTAS DE COMPILACIÓN [cite: 2, 8]
-echo -e "${BLUE}[ 2/6 ]${NC} Instalando herramientas de compilación..."
-pkg install -y binutils python clang make build-essential
-echo -e "${GREEN}[ OK ]${NC} Entorno de compilación listo."
-
-# 3. MOTORES Y CONTROL [cite: 3, 9]
-echo -e "${BLUE}[ 3/6 ]${NC} Instalando Node.js y Git..."
-pkg install -y nodejs git
-echo -e "${GREEN}[ OK ]${NC} Motores instalados."
-
-# 4. MULTIMEDIA Y DATOS [cite: 4, 10]
-echo -e "${BLUE}[ 4/6 ]${NC} Instalando SQLite3, FFmpeg y Libwebp..."
-pkg install -y ffmpeg libwebp sqlite
-echo -e "${GREEN}[ OK ]${NC} Soporte multimedia y base de datos listos."
-
-# 5. GESTOR DE PERSISTENCIA (PM2) [cite: 5, 11]
-echo -e "${BLUE}[ 5/6 ]${NC} Instalando PM2 (Para ejecución 24/7)..."
-npm install -g pm2
-echo -e "${GREEN}[ OK ]${NC} PM2 instalado globalmente."
-
-# 6. ESTRUCTURA DE DIRECTORIOS [cite: 12]
-echo -e "${BLUE}[ 6/6 ]${NC} Configurando directorio 'grupospro'..."
+echo -e "\e[34m[2/4]\e[0m Configurando directorio del proyecto..."
 mkdir -p $HOME/grupospro
-cd $HOME/grupospro
-echo -e "${GREEN}[ OK ]${NC} Carpeta de trabajo lista."
+cd $HOME/grupospro [cite: 18]
 
-# SOLICITUD DE PERMISOS [cite: 6, 13]
-echo -e "\n${YELLOW}[ IMPORTANTE ]${NC} Acepta el permiso de memoria en pantalla."
-termux-setup-storage
+echo -e "\e[34m[3/4]\e[0m Instalando librerías de Node.js (Sin NDK)..."
+# Instalamos las versiones específicas que funcionaron en nuestras pruebas
+npm install axios sql.js [cite: 18]
 
-# VERIFICACIÓN FINAL
-NODE_V=$(node -v)
-PM2_V=$(pm2 -v | tail -n 1)
-SQL_V=$(sqlite3 --version | cut -d ' ' -f 1)
+echo -e "\e[34m[4/4]\e[0m Creando motor de sincronización (sync.js)..."
+cat <<EOF > sync.js
+const initSqlJs = require('sql.js');
+const axios = require('axios');
+const fs = require('fs');
+const rl = require('readline').createInterface({input:process.stdin,output:process.stdout});
 
-echo -e "\n${BLUE}=========================================${NC}"
-echo -e "${GREEN}      RESUMEN DE INSTALACIÓN EXITOSA     ${NC}"
-echo -e "${BLUE}=========================================${NC}"
-echo -e "📦 Proyecto:  ${YELLOW}grupospro${NC}"
-echo -e "🟢 Node.js:   ${GREEN}$NODE_V${NC}"
-echo -e "🟢 PM2:       ${GREEN}v$PM2_V${NC}"
-echo -e "🟢 SQLite:    ${GREEN}v$SQL_V${NC}"
-echo -e "🛠️ Compilación: ${GREEN}[ LISTA ]${NC}"
-echo -e "${BLUE}=========================================${NC}"
-echo -e "${YELLOW}Instrucciones:${NC}"
-echo -e "1. El entorno está blindado y listo para el Bloque 2." [cite: 14]
-echo -e "${BLUE}=========================================${NC}"
+const DB_PATH = './grupospro.sqlite';
+
+async function iniciarBloque2() {
+    const SQL = await initSqlJs();
+    let db = new SQL.Database();
+    
+    // Configuración de Tablas Locales [cite: 16]
+    db.run("CREATE TABLE IF NOT EXISTS ajustes (clave TEXT PRIMARY KEY, valor TEXT)");
+    db.run("CREATE TABLE IF NOT EXISTS productos (item TEXT, precio TEXT)");
+    db.run("CREATE TABLE IF NOT EXISTS grupos (id TEXT, nombre TEXT)");
+
+    console.log('\e[33m\n[ CONFIG ] Vinculación inicial de Google Sheets...\e[0m');
+    const url = await new Promise(r => rl.question('[ CONFIG ] Pega la URL de tu Web App: ', r));
+    
+    try {
+        console.log('\e[34m[ INFO ] Probando conexión y enviando reporte...\e[0m');
+        
+        // Prueba de Escritura (Subida a Columna A y B) [cite: 27]
+        const resSubida = await axios.get(\`\${url}?action=reporte&id=ID_NUEVA_INSTALACION&nombre=EXITO_BLOQUE_1_Y_2\`);
+        
+        // Prueba de Lectura (Bajada de Productos y Grupos) [cite: 20, 22]
+        const resBajada = await axios.get(url);
+        
+        if (resBajada.data.status === "success") {
+            db.run("INSERT OR REPLACE INTO ajustes VALUES ('url_sheets',?)", [url]);
+            
+            // Guardar datos en SQLite [cite: 23]
+            resBajada.data.productos.forEach(p => db.run("INSERT INTO productos VALUES (?,?)", [p.item, p.precio]));
+            resBajada.data.grupos.forEach(g => db.run("INSERT INTO grupos fueron guardados", [g.id, g.nombre]));
+            
+            const data = db.export();
+            fs.writeFileSync(DB_PATH, Buffer.from(data));
+            
+            console.log('\n\e[32m=========================================');
+            console.log('      INSTALACIÓN Y VINCULACIÓN EXITOSA');
+            console.log('=========================================\e[0m');
+            console.log(\`✅ Nube: \${resSubida.data.message}\`);
+            console.log(\`✅ Local: \${resBajada.data.productos.length} Productos y \${resBajada.data.grupos.length} Grupos guardados.\`);
+        }
+    } catch (e) {
+        console.log('\e[31m[ ERROR ] Error en Bloque 2: \e[0m', e.message);
+    }
+    process.exit();
+}
+iniciarBloque2();
+EOF
+
+echo -e "\e[32m[ OK ] Entorno preparado. Iniciando vinculación...\e[0m"
+node sync.js
