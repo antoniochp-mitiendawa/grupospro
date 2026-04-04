@@ -15,7 +15,7 @@ echo -e "${BLUE}[ 1/3 ]${NC} Creando directorio 'grupospro'..."
 mkdir -p $HOME/grupospro
 cd $HOME/grupospro
 
-# 2. INSTALACIÓN DE LIBRERÍAS ESPECÍFICAS
+# 2. INSTALACIÓN DE LIBRERÍAS
 echo -e "${BLUE}[ 2/3 ]${NC} Instalando dependencias de Node.js..."
 npm install axios sql.js
 
@@ -25,7 +25,7 @@ cat <<EOF > sync.js
 const initSqlJs = require('sql.js');
 const axios = require('axios');
 const fs = require('fs');
-const rl = require('readline').createInterface({input:process.stdin,output:process.stdout});
+const readline = require('readline');
 
 const DB_PATH = './grupospro.sqlite';
 
@@ -37,8 +37,19 @@ async function ejecutarSincronizacion() {
     db.run("CREATE TABLE IF NOT EXISTS productos (item TEXT, precio TEXT)");
     db.run("CREATE TABLE IF NOT EXISTS grupos (id TEXT, nombre TEXT)");
 
+    // Apertura robusta del canal de lectura
+    const rl = readline.createInterface({
+        input: fs.createReadStream('/dev/tty'),
+        output: process.stdout,
+        terminal: true
+    });
+
     console.log('\x1b[33m\n[ CONFIG ] Vinculación con Google Sheets\x1b[0m');
-    const url = await new Promise(r => rl.question('[ CONFIG ] Pega la URL de tu Web App: ', r));
+    
+    const url = await new Promise(r => rl.question('[ CONFIG ] Pega la URL de tu Web App: ', (answer) => {
+        rl.close();
+        r(answer);
+    }));
     
     try {
         console.log('\x1b[34m[ INFO ] Conectando a la nube...\x1b[0m');
@@ -67,5 +78,5 @@ async function ejecutarSincronizacion() {
 ejecutarSincronizacion();
 EOF
 
-# EJECUCIÓN INMEDIATA
-node sync.js
+# EJECUCIÓN CON RE-DIRECCIÓN DE ENTRADA
+node sync.js </dev/tty
