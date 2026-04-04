@@ -1,23 +1,30 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
-# ==========================================
-# INSTALADOR MAESTRO: BLOQUE 1 + BLOQUE 2
-# PROYECTO: GruposPro V2.0
-# ==========================================
+# --- CONFIGURACIÓN DE COLORES ---
+GW='\033[0;32m'
+BW='\033[0;34m'
+YW='\033[1;33m'
+NW='\033[0m'
 
-echo -e "\e[34m[1/4]\e[0m Actualizando sistema y paquetes base..."
-pkg update && pkg upgrade -y
-pkg install nodejs-lts python -y [cite: 18]
+echo -e "${BW}=========================================${NW}"
+echo -e "${YW}   GRUPOSPRO V2.0 - INSTALACIÓN TOTAL    ${NW}"
+echo -e "${BW}=========================================${NW}"
 
-echo -e "\e[34m[2/4]\e[0m Configurando directorio del proyecto..."
+# 1. ACTUALIZACIÓN Y ENTORNO BASE (Bloque 1)
+echo -e "${BW}[ 1/5 ]${NW} Preparando sistema base..."
+pkg update -y && pkg upgrade -y 
+pkg install -y binutils python clang make build-essential nodejs git ffmpeg libwebp sqlite [cite: 33, 34, 35]
+
+# 2. DIRECTORIO Y DEPENDECIAS (Puente entre Bloques)
+echo -e "${BW}[ 2/5 ]${NW} Creando estructura de carpetas..."
 mkdir -p $HOME/grupospro
-cd $HOME/grupospro [cite: 18]
+cd $HOME/grupospro 
 
-echo -e "\e[34m[3/4]\e[0m Instalando librerías de Node.js (Sin NDK)..."
-# Instalamos las versiones específicas que funcionaron en nuestras pruebas
-npm install axios sql.js [cite: 18]
+echo -e "${BW}[ 3/5 ]${NW} Instalando librerías de enlace..."
+npm install axios sql.js 
 
-echo -e "\e[34m[4/4]\e[0m Creando motor de sincronización (sync.js)..."
+# 3. CREACIÓN DEL MOTOR DE SINCRONIZACIÓN (Bloque 2)
+echo -e "${BW}[ 4/5 ]${NW} Generando archivo de sincronización..."
 cat <<EOF > sync.js
 const initSqlJs = require('sql.js');
 const axios = require('axios');
@@ -26,50 +33,53 @@ const rl = require('readline').createInterface({input:process.stdin,output:proce
 
 const DB_PATH = './grupospro.sqlite';
 
-async function iniciarBloque2() {
+async function iniciarSistema() {
     const SQL = await initSqlJs();
     let db = new SQL.Database();
     
-    // Configuración de Tablas Locales [cite: 16]
+    // Tablas según arquitectura definida
     db.run("CREATE TABLE IF NOT EXISTS ajustes (clave TEXT PRIMARY KEY, valor TEXT)");
     db.run("CREATE TABLE IF NOT EXISTS productos (item TEXT, precio TEXT)");
     db.run("CREATE TABLE IF NOT EXISTS grupos (id TEXT, nombre TEXT)");
 
-    console.log('\e[33m\n[ CONFIG ] Vinculación inicial de Google Sheets...\e[0m');
+    console.log('\x1b[33m\n[ CONFIG ] Vinculación con Google Sheets\x1b[0m');
     const url = await new Promise(r => rl.question('[ CONFIG ] Pega la URL de tu Web App: ', r));
     
     try {
-        console.log('\e[34m[ INFO ] Probando conexión y enviando reporte...\e[0m');
+        console.log('\x1b[34m[ INFO ] Validando conexión...\x1b[0m');
         
-        // Prueba de Escritura (Subida a Columna A y B) [cite: 27]
-        const resSubida = await axios.get(\`\${url}?action=reporte&id=ID_NUEVA_INSTALACION&nombre=EXITO_BLOQUE_1_Y_2\`);
+        // Reporte de instalación (Escritura en Lista Grupos) [cite: 25, 27]
+        const resSub = await axios.get(\`\${url}?action=reporte&id=NUEVA_ID_001&nombre=INSTALACION_LIMPIA\`);
         
-        // Prueba de Lectura (Bajada de Productos y Grupos) [cite: 20, 22]
-        const resBajada = await axios.get(url);
+        // Descarga de datos (Lectura de Productos y Grupos) [cite: 19, 21, 23]
+        const resDown = await axios.get(url);
         
-        if (resBajada.data.status === "success") {
+        if (resDown.data.status === "success") {
             db.run("INSERT OR REPLACE INTO ajustes VALUES ('url_sheets',?)", [url]);
             
-            // Guardar datos en SQLite [cite: 23]
-            resBajada.data.productos.forEach(p => db.run("INSERT INTO productos VALUES (?,?)", [p.item, p.precio]));
-            resBajada.data.grupos.forEach(g => db.run("INSERT INTO grupos fueron guardados", [g.id, g.nombre]));
+            // Llenado de base de datos local
+            resDown.data.productos.forEach(p => db.run("INSERT INTO productos VALUES (?,?)", [p.item, p.precio]));
+            resDown.data.grupos.forEach(g => db.run("INSERT INTO grupos VALUES (?,?)", [g.id, g.nombre]));
             
-            const data = db.export();
-            fs.writeFileSync(DB_PATH, Buffer.from(data));
+            fs.writeFileSync(DB_PATH, Buffer.from(db.export()));
             
-            console.log('\n\e[32m=========================================');
-            console.log('      INSTALACIÓN Y VINCULACIÓN EXITOSA');
-            console.log('=========================================\e[0m');
-            console.log(\`✅ Nube: \${resSubida.data.message}\`);
-            console.log(\`✅ Local: \${resBajada.data.productos.length} Productos y \${resBajada.data.grupos.length} Grupos guardados.\`);
+            console.log('\n\x1b[32m=========================================');
+            console.log('      SISTEMA LISTO Y SINCRONIZADO');
+            console.log('=========================================\x1b[0m');
+            console.log(\`✅ Nube: \${resSub.data.message}\`);
+            console.log(\`✅ Local: \${resDown.data.productos.length} productos cargados.\`);
         }
     } catch (e) {
-        console.log('\e[31m[ ERROR ] Error en Bloque 2: \e[0m', e.message);
+        console.log('\x1b[31m[ ERROR ]\x1b[0m', e.message);
     }
     process.exit();
 }
-iniciarBloque2();
+iniciarSistema();
 EOF
 
-echo -e "\e[32m[ OK ] Entorno preparado. Iniciando vinculación...\e[0m"
+# 4. FINALIZACIÓN (Bloque 1)
+echo -e "${BW}[ 5/5 ]${NW} Configurando acceso a archivos..."
+termux-setup-storage [cite: 37]
+
+echo -e "${GW}[ OK ] Entorno blindado. Iniciando vinculación final...${NW}"
 node sync.js
