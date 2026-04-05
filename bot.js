@@ -9,31 +9,23 @@ const fs = require("fs");
 const readline = require("readline");
 const initSqlJs = require('sql.js');
 
-// Conexión con tus archivos existentes en GitHub
-const listaEmojis = require('./emojis.js');
-const sinonimos = require('./sinonimos.js');
+// Verificación de archivos de soporte
+const listaEmojis = fs.existsSync('./emojis.js') ? require('./emojis.js') : ["✨"];
+const sinonimos = fs.existsSync('./sinonimos.js') ? require('./sinonimos.js') : {};
 
 const DB_PATH = './grupospro.sqlite';
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const cuestion = (texto) => new Promise((resolver) => rl.question(texto, resolver));
 
-// Función para aplicar Spintax usando tus archivos de soporte
-const aplicarSpintax = (texto) => {
-    let contenido = texto;
-    // Selección aleatoria de emoji de tu base de datos
-    const emoji = listaEmojis[Math.floor(Math.random() * listaEmojis.length)] || "✨";
-    return `${emoji} ${contenido} ${emoji}`;
-};
-
 async function iniciarBot() {
-    console.log("\x1b[34m[ BLOQUE 3 ] Motor de Mensajería Activo\x1b[0m");
+    console.log("\x1b[34m[ BLOQUE 3 ] Motor de WhatsApp Online\x1b[0m");
     
-    // Carga de la base de datos generada por el Bloque 2
-    const SQL = await initSqlJs();
     if (!fs.existsSync(DB_PATH)) {
-        console.log("\x1b[31m[ ERROR ] No se encuentra grupospro.sqlite. Ejecute el Bloque 2 primero.\x1b[0m");
+        console.log("❌ Error: Base de datos no encontrada.");
         return;
     }
+
+    const SQL = await initSqlJs();
     const dbFile = fs.readFileSync(DB_PATH);
     const db = new SQL.Database(dbFile);
 
@@ -48,12 +40,12 @@ async function iniciarBot() {
         browser: ["Ubuntu", "Chrome", "20.0.0"]
     });
 
-    // Emparejamiento por código (Pairing Code)
+    // Código de vinculación
     if (!sock.authState.creds.registered) {
         await delay(3000);
         const numero = await cuestion("\x1b[33m[ CONFIG ] Ingrese su número (ej: 521XXXXXXXXXX): \x1b[0m");
         const codigo = await sock.requestPairingCode(numero.trim());
-        console.log("\x1b[32m\nCÓDIGO DE VINCULACIÓN: " + codigo + "\n\x1b[0m");
+        console.log("\x1b[32m\nTU CÓDIGO ES: " + codigo + "\x1b[0m\n");
     }
 
     sock.ev.on("creds.update", saveCreds);
@@ -70,28 +62,24 @@ async function iniciarBot() {
             if (resGrupos[0] && resProds[0]) {
                 const listaGrupos = resGrupos[0].values;
                 const listaProductos = resProds[0].values;
-                let prodIdx = 0; // Para la rotación de productos solicitada
+                let prodIdx = 0;
 
                 for (const [gid, gnombre] of listaGrupos) {
                     const [item, desc, precio] = listaProductos[prodIdx];
                     
-                    // Construcción del mensaje con Spintax y rotación
-                    const baseMensaje = `*${item.toUpperCase()}*\n${desc}\n💰 Precio: $${precio}`;
-                    const mensajeFinal = aplicarSpintax(baseMensaje);
+                    // Aplicar Emojis del archivo de GitHub
+                    const emoji = listaEmojis[Math.floor(Math.random() * listaEmojis.length)];
+                    const mensaje = `${emoji} *${item.toUpperCase()}*\n${desc}\n💰 *PRECIO:* $${precio}`;
                     
                     console.log(`[ ENVÍO ] Grupo: ${gnombre} | Producto: ${item}`);
                     
-                    // Delay aleatorio entre 7 y 25 segundos para evitar baneo
+                    // Delay humano 7-25s
                     await delay(Math.floor(Math.random() * (25000 - 7000) + 7000));
                     
-                    await sock.sendMessage(gid, { text: mensajeFinal });
-
-                    // Avanzar al siguiente producto para el próximo grupo
+                    await sock.sendMessage(gid, { text: mensaje });
                     prodIdx = (prodIdx + 1) % listaProductos.length;
                 }
-                
-                // Notificación de cierre de ciclo al dueño
-                await sock.sendMessage(msg.key.remoteJid, { text: "✅ Ciclo completado con rotación de productos." });
+                await sock.sendMessage(msg.key.remoteJid, { text: "✅ Prueba terminada." });
             }
         }
     });
