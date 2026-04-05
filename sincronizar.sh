@@ -1,112 +1,57 @@
-#!/data/data/com.termux/files/usr/bin/bash
-
-# ==========================================
-# INSTALADOR AUTOMATIZADO - GRUPOS PRO V2
-# ==========================================
-# Basado en códigos exitosos y descartando errores previos [cite: 1, 9]
-
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m'
-
-echo -e "${BLUE}=========================================${NC}"
-echo -e "${YELLOW}   BLOQUE 2: CONFIGURACIÓN Y VINCULACIÓN ${NC}"
-echo -e "${BLUE}=========================================${NC}"
-
-# 1. PREPARACIÓN LIMPIA DEL ENTORNO 
-echo -e "${BLUE}[ 1/3 ]${NC} Creando directorio del proyecto..."
-mkdir -p $HOME/grupospro
-cd $HOME/grupospro
-
-# 2. INSTALACIÓN DE DEPENDENCIAS (Garantiza sql.js y axios) [cite: 2]
-echo -e "${BLUE}[ 2/3 ]${NC} Instalando librerías necesarias..."
-npm install axios sql.js
-
-# 3. GENERACIÓN DEL MOTOR DE SINCRONIZACIÓN (sync.js) [cite: 3]
-echo -e "${BLUE}[ 3/3 ]${NC} Generando motor de datos con reporte..."
-
-cat <<'EOF' > sync.js
-const initSqlJs = require('sql.js');
 const axios = require('axios');
 const fs = require('fs');
-const readline = require('readline');
+const initSqlJs = require('sql.js');
+const { spawn } = require('child_process'); // Herramienta para saltar al Bloque 3
 
-const DB_PATH = './grupospro.sqlite';
-
-async function ejecutarSincronizacion() {
-    const SQL = await initSqlJs();
-    let db = new SQL.Database();
-
-    // LOGS DE EVENTOS: No se eliminan ni simplifican 
-    console.log("\x1b[34m[ LOG ] Iniciando configuración de base de datos...\x1b[0m");
-
-    // CREACIÓN DE TABLAS (Garantiza Item, Descripción y Precio) [cite: 4, 5]
-    db.run("CREATE TABLE IF NOT EXISTS ajustes (clave TEXT PRIMARY KEY, valor TEXT)");
-    db.run("CREATE TABLE IF NOT EXISTS productos (item TEXT, descripcion TEXT, precio TEXT)");
-    db.run("CREATE TABLE IF NOT EXISTS grupos (id TEXT, nombre TEXT)");
+async function sincronizarDatos() {
+    console.log("\x1b[34m[ BLOQUE 2 ] Sincronizando con Google Sheets...\x1b[0m");
     
-    const rl = readline.createInterface({
-        input: fs.createReadStream('/dev/tty'),
-        output: process.stdout,
-        terminal: true
-    });
-
-    console.log('\x1b[33m\n[ CONFIG ] Vinculación con Google Sheets\x1b[0m');
-    
-    const url = await new Promise(r => rl.question('[ CONFIG ] Pega la URL de tu Web App: ', (answer) => {
-        rl.close();
-        r(answer.trim());
-    }));
+    // URL de tu Web App de Google (La que ya tienes configurada)
+    const url = "TU_URL_DE_GOOGLE_SHEETS"; 
 
     try {
-        console.log('\x1b[34m[ INFO ] Conectando a la nube...\x1b[0m');
+        const respuesta = await axios.get(url);
+        const datos = respuesta.data;
 
-        // REPORTE DE VINCULACIÓN (Ping de prueba a Google Sheets) 
-        console.log('\x1b[36m[ LOG ] Enviando señal de prueba a la hoja...\x1b[0m');
-        const resSubida = await axios.get(`${url}?action=reporte&id=VINCULACION_TEST&nombre=BLOQUE_2_OK`);
+        const SQL = await initSqlJs();
+        const db = new SQL.Database();
+
+        // Crear tablas
+        db.run("CREATE TABLE productos (item TEXT, descripcion TEXT, precio REAL)");
+        db.run("CREATE TABLE grupos (id TEXT, nombre TEXT)");
+
+        // Insertar Productos
+        datos.productos.forEach(p => {
+            db.run("INSERT INTO productos VALUES (?, ?, ?)", [p.item, p.descripcion, p.precio]);
+        });
+
+        // Insertar Grupos
+        datos.grupos.forEach(g => {
+            db.run("INSERT INTO grupos VALUES (?, ?)", [g.id, g.nombre]);
+        });
+
+        // Guardar físicamente
+        const data = db.export();
+        const buffer = Buffer.from(data);
+        fs.writeFileSync('./grupospro.sqlite', buffer);
+
+        console.log("\x1b[32m\n=========================================");
+        console.log("   VINCULACIÓN Y CARGA EXITOSA");
+        console.log("=========================================");
+        console.log(`✅ PRODUCTOS CARGADOS: ${datos.productos.length}`);
+        console.log(`✅ GRUPOS AUTORIZADOS: ${datos.grupos.length}\x1b[0m\n`);
+
+        // --- SALTO AUTOMÁTICO AL BLOQUE 3 ---
+        console.log("\x1b[33m[ INFO ] Iniciando Bloque 3 automáticamente...\x1b[0m");
         
-        // DESCARGA DE DATOS 
-        console.log('\x1b[36m[ LOG ] Descargando inventario actualizado...\x1b[0m');
-        const resBajada = await axios.get(url);
+        const child = spawn('node', ['bot.js'], {
+            stdio: 'inherit', // Esto permite que el Bloque 3 use la misma terminal para el código de vinculación
+            shell: true
+        });
 
-        if (resBajada.data.status === "success") {
-            db.run("INSERT OR REPLACE INTO ajustes VALUES ('url_sheets',?)", [url]);
-
-            // GUARDADO DE PRODUCTOS (3 COLUMNAS: ITEM, DESCRIPCIÓN, PRECIO) [cite: 11]
-            resBajada.data.productos.forEach(p => {
-                db.run("INSERT INTO productos VALUES (?,?,?)", [p.item, p.descripcion || "Sin descripción", p.precio]);
-            });
-
-            // GUARDADO DE GRUPOS (ID, NOMBRE) [cite: 11]
-            resBajada.data.grupos.forEach(g => {
-                db.run("INSERT INTO grupos VALUES (?,?)", [g.id, g.nombre]);
-            });
-            
-            // Persistencia física de la DB [cite: 11]
-            fs.writeFileSync(DB_PATH, Buffer.from(db.export()));
-
-            console.log('\n\x1b[32m=========================================');
-            console.log('      VINCULACIÓN COMPLETADA EXITOSAMENTE');
-            console.log('=========================================\x1b[0m');
-            console.log(`✅ Reporte: ${resSubida.data.message}`);
-            console.log(`✅ Productos: ${resBajada.data.productos.length} sincronizados.`);
-            console.log(`✅ Grupos: ${resBajada.data.grupos.length} autorizados.`);
-            
-            // VERIFICACIÓN VISUAL (Garantiza que la descripción bajó) [cite: 11]
-            if(resBajada.data.productos.length > 0) {
-                const p = resBajada.data.productos[0];
-                console.log(`\x1b[35m[ CHECK ] Muestra: ${p.item} | ${p.precio}\x1b[0m`);
-            }
-        }
-    } catch (e) {
-        console.log('\x1b[31m[ ERROR ]\x1b[0m', e.message);
+    } catch (error) {
+        console.error("\x1b[31m[ ERROR ] No se pudo sincronizar: " + error.message + "\x1b[0m");
     }
-    process.exit();
 }
-ejecutarSincronizacion();
-EOF
 
-# EJECUCIÓN DEL MOTOR [cite: 14]
-node sync.js </dev/tty
+sincronizarDatos();
